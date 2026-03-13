@@ -168,6 +168,16 @@ logs-worker:
 
 # === Development ===
 
+# Create arxi Postgres role + database (idempotent, run once on fresh machine)
+db-init:
+	@echo "Creating arxi role and database..."
+	@psql -U $(whoami) -d postgres -c "SELECT 1 FROM pg_roles WHERE rolname='arxi'" | grep -q 1 \
+		|| psql -U $(whoami) -d postgres -c "CREATE ROLE arxi WITH LOGIN PASSWORD 'arxi';"
+	@psql -U $(whoami) -d postgres -c "SELECT 1 FROM pg_database WHERE datname='arxi'" | grep -q 1 \
+		|| psql -U $(whoami) -d postgres -c "CREATE DATABASE arxi OWNER arxi;"
+	@psql -U $(whoami) -d arxi -c "GRANT ALL ON SCHEMA public TO arxi; GRANT CREATE ON SCHEMA public TO arxi;"
+	@echo "Done — role:arxi db:arxi ready"
+
 # Run database migrations
 migrate:
 	cd backend && uv run alembic upgrade head

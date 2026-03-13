@@ -42,15 +42,13 @@ ollama serve  # if not already running
 # 3. Pull the LLM model
 ollama pull qwen3:8b
 
-# 4. Create the database
-createdb arxi
-psql arxi -c "CREATE USER arxi WITH PASSWORD 'arxi'; GRANT ALL ON DATABASE arxi TO arxi; ALTER USER arxi CREATEDB;"
+# 4. Create the database (role + db + grants — idempotent)
+just db-init
 
 # 5. Backend setup
 cd backend
 cp ../.env.example .env   # or create from scratch (see below)
-uv sync                   # install Python dependencies
-uv run alembic upgrade head  # run migrations
+uv run alembic upgrade head  # install deps + run migrations
 
 # 6. Seed demo data
 uv run python -m scripts.seed
@@ -103,6 +101,7 @@ just restart-frontend   # Restart Next.js only
 just restart-worker     # Restart pipeline worker only
 just logs-backend       # Tail backend logs
 just logs-worker        # Tail worker logs
+just db-init            # Create Postgres role + database (run once)
 just seed               # Wipe + rebuild all demo data
 just test               # Run pytest
 just migrate            # Run Alembic migrations
