@@ -199,5 +199,10 @@ seed:
 	cd backend && uv run python -m scripts.seed
 
 # Full setup: infra + migrate + seed (run once after clone)
+# If migrate fails with permission errors, run: just infra-reset && just setup
 setup: start-infra migrate seed
 	@echo "Setup complete — run 'just start' to launch all services"
+
+# Nuclear reset: wipe everything and rebuild from scratch
+reset: infra-reset start-infra migrate seed
+	@echo "Full reset complete — run 'just start' to launch all services"
