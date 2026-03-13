@@ -7,19 +7,36 @@ root_dir := justfile_directory()
 pid_dir := root_dir / ".arxi/pids"
 log_dir := root_dir / ".arxi/logs"
 
-# === Infrastructure (Homebrew services) ===
+# === Infrastructure (Docker) ===
 
-# Start postgres and redis via brew services
+# Start postgres and redis containers
 start-infra:
-	@brew services start postgresql@17 2>/dev/null || true
-	@brew services start redis 2>/dev/null || true
-	@echo "Infra started (postgres:5432, redis:6379)"
+	@docker compose up -d postgres redis
+	@echo "Waiting for postgres..."
+	@docker compose exec postgres sh -c 'until pg_isready -U arxi -d arxi -q; do sleep 0.5; done'
+	@echo "Infra ready (postgres:5432, redis:6379)"
 
-# Stop postgres and redis via brew services
+# Stop postgres and redis containers
 stop-infra:
-	@brew services stop redis 2>/dev/null || true
-	@brew services stop postgresql@17 2>/dev/null || true
+	@docker compose down
 	@echo "Infra stopped"
+
+# Show docker container status
+infra-status:
+	@docker compose ps
+
+# Tail postgres logs
+logs-postgres:
+	docker compose logs -f postgres
+
+# Tail redis logs
+logs-redis:
+	docker compose logs -f redis
+
+# Wipe postgres data and start fresh (destructive!)
+infra-reset:
+	docker compose down -v
+	@echo "Volumes removed — next start-infra will reinitialize"
 
 # === Backend (uvicorn) ===
 
@@ -135,6 +152,9 @@ restart: stop start
 # Show status of all services
 status:
 	@echo "=== ARXI Services ==="
+	@echo "--- Docker ---"
+	@docker compose ps --format "table {{{{.Name}}}}\t{{{{.Status}}}}\t{{{{.Ports}}}}" 2>/dev/null || echo "  Docker Compose not running"
+	@echo "--- App ---"
 	@if [ -f {{pid_dir}}/backend.pid ] && kill -0 $(cat {{pid_dir}}/backend.pid) 2>/dev/null; then \
 		echo "Backend:   UP (PID $(cat {{pid_dir}}/backend.pid), port 8000)"; \
 	else \
@@ -150,8 +170,6 @@ status:
 	else \
 		echo "Worker:    DOWN"; \
 	fi
-	@echo "Postgres:  $(/opt/homebrew/opt/postgresql@17/bin/pg_isready -q 2>/dev/null && echo 'UP' || echo 'DOWN')"
-	@echo "Redis:     $(/opt/homebrew/opt/redis/bin/redis-cli ping 2>/dev/null | grep -q PONG && echo 'UP' || echo 'DOWN')"
 	@echo "Ollama:    $(curl -s -o /dev/null -w 'UP (%{http_code})' http://localhost:11434/api/tags 2>/dev/null || echo 'DOWN')"
 
 # Tail backend logs
@@ -168,17 +186,6 @@ logs-worker:
 
 # === Development ===
 
-# Create arxi Postgres role + database (idempotent, run once on fresh machine)
-db-init:
-	@echo "Creating arxi role and database..."
-	@psql -U $(whoami) -d postgres -c "SELECT 1 FROM pg_roles WHERE rolname='arxi'" | grep -q 1 \
-		|| psql -U $(whoami) -d postgres -c "CREATE ROLE arxi WITH LOGIN PASSWORD 'arxi';"
-	@psql -U $(whoami) -d postgres -c "SELECT 1 FROM pg_database WHERE datname='arxi'" | grep -q 1 \
-		|| psql -U $(whoami) -d postgres -c "CREATE DATABASE arxi OWNER arxi;"
-	@psql -U $(whoami) -d arxi -c "GRANT ALL ON DATABASE arxi TO arxi; GRANT ALL ON SCHEMA public TO arxi; GRANT CREATE ON SCHEMA public TO arxi; ALTER ROLE arxi CREATEDB;"
-	@psql -U $(whoami) -d arxi -c "CREATE SCHEMA IF NOT EXISTS arxi AUTHORIZATION arxi; CREATE SCHEMA IF NOT EXISTS compliance AUTHORIZATION arxi;"
-	@echo "Done — role:arxi db:arxi ready"
-
 # Run database migrations
 migrate:
 	cd backend && uv run alembic upgrade head
@@ -190,3 +197,7 @@ test:
 # Wipe and rebuild all dev data (users, drugs, patients, prescriptions, e-prescribes)
 seed:
 	cd backend && uv run python -m scripts.seed
+
+# Full setup: infra + migrate + seed (run once after clone)
+setup: start-infra migrate seed
+	@echo "Setup complete — run 'just start' to launch all services"

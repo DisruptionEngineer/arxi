@@ -7,6 +7,7 @@ AI-native pharmacy prescription management platform with real-time clinical deci
 - **E-Prescribe Pipeline** — NCPDP SCRIPT XML ingestion with automatic validation and patient matching
 - **AI Clinical Decision Support** — Local LLM-powered drug interaction checks, allergy screening, dosage verification, and prescriber credential validation
 - **AI Prescribe Assist** — Intelligent Rx recommendations based on patient history and drug data
+- **Real-Time AI Pipeline Demo** — SSE-streamed 4-stage inference visualization (data gathering → prompt construction → LLM inference → response parsing)
 - **Patient-Centric Workflow** — Smart drug selection with refill/renewal detection and prescriber history
 - **3-Tier Patient Matching** — Exact match, LLM-assisted fuzzy matching, and auto-create
 - **RBAC** — Role-based access control (admin, pharmacist, technician, agent)
@@ -15,17 +16,16 @@ AI-native pharmacy prescription management platform with real-time clinical deci
 
 ## Prerequisites
 
-Install these on your machine before starting:
-
 | Dependency | Version | Install |
 |-----------|---------|---------|
+| Docker | 24+ | [docker.com](https://www.docker.com/) |
 | Python | 3.12+ | [python.org](https://www.python.org/) |
 | Node.js | 20+ | [nodejs.org](https://nodejs.org/) |
-| PostgreSQL | 16+ | `brew install postgresql@17` or [postgresql.org](https://www.postgresql.org/) |
-| Redis | 7+ | `brew install redis` or [redis.io](https://redis.io/) |
 | Ollama | latest | [ollama.com](https://ollama.com/) |
 | UV | latest | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
 | Just | latest | `brew install just` or [just.systems](https://just.systems/) |
+
+> Postgres and Redis run in Docker — no need to install them natively.
 
 ## Quick Start
 
@@ -34,36 +34,28 @@ Install these on your machine before starting:
 git clone https://github.com/DisruptionEngineer/arxi.git
 cd arxi
 
-# 2. Start infrastructure
-brew services start postgresql@17
-brew services start redis
-ollama serve  # if not already running
+# 2. Backend env
+cd backend
+cp ../.env.example .env   # or create from scratch (see below)
+cd ..
 
 # 3. Pull the LLM model
 ollama pull qwen3:8b
 
-# 4. Create the database (role + db + grants — idempotent)
-just db-init
+# 4. One-command setup (starts Docker, runs migrations, seeds data)
+just setup
 
-# 5. Backend setup
-cd backend
-cp ../.env.example .env   # or create from scratch (see below)
-uv run alembic upgrade head  # install deps + run migrations
+# 5. Install frontend deps
+cd frontend && npm install && cd ..
 
-# 6. Seed demo data
-uv run python -m scripts.seed
-
-# 7. Frontend setup
-cd ../frontend
-npm install
-
-# 8. Start everything (from project root)
-cd ..
+# 6. Start everything
 just start
 
-# 9. Open the app
+# 7. Open the app
 open http://localhost:3000
 ```
+
+Login: `pharmacist` / `pharma123`
 
 ## Environment Variables
 
@@ -92,19 +84,34 @@ UPLOAD_DIR=./uploads
 All commands via `just` from the project root:
 
 ```bash
-just start              # Start everything (infra + backend + worker + frontend)
-just stop               # Stop everything
+# Lifecycle
+just start              # Start everything (Docker + backend + worker + frontend)
+just stop               # Stop everything (including Docker containers)
 just restart            # Full restart
 just status             # Health check all services
+just setup              # First-time setup (Docker + migrate + seed)
+
+# Individual services
 just restart-backend    # Restart FastAPI only
 just restart-frontend   # Restart Next.js only
 just restart-worker     # Restart pipeline worker only
+
+# Infrastructure
+just start-infra        # Start Docker containers only
+just stop-infra         # Stop Docker containers
+just infra-status       # Docker container status
+just infra-reset        # Wipe Docker volumes and start fresh
+
+# Logs
 just logs-backend       # Tail backend logs
+just logs-frontend      # Tail frontend logs
 just logs-worker        # Tail worker logs
-just db-init            # Create Postgres role + database (run once)
+just logs-postgres      # Tail Postgres container logs
+
+# Development
+just migrate            # Run Alembic migrations
 just seed               # Wipe + rebuild all demo data
 just test               # Run pytest
-just migrate            # Run Alembic migrations
 ```
 
 ## Architecture
@@ -128,24 +135,16 @@ just migrate            # Run Alembic migrations
 
 **Backend:** FastAPI + SQLAlchemy (async) + Alembic + Redis
 
-**Frontend:** Next.js 15 + TypeScript + Tailwind CSS
+**Frontend:** Next.js 16 + TypeScript + Tailwind CSS
 
 **AI:** Ollama (local) with qwen3:8b for clinical review, prescribe-assist, and patient matching
 
+**Infrastructure:** Docker Compose (Postgres 16 + Redis 7)
+
 **Database Schemas:**
-- `public` — users
+- `public` — users, alembic_version
 - `arxi` — patients, prescriptions, drugs
 - `compliance` — audit_log
-
-## Optional: Docker Compose
-
-For infrastructure only (Postgres, Redis, Ollama):
-
-```bash
-docker compose up -d postgres redis ollama
-```
-
-Then run backend/frontend locally as above.
 
 ## API Endpoints
 
@@ -159,7 +158,9 @@ Then run backend/frontend locally as above.
 | POST | `/api/intake/newrx` | E-prescribe XML ingest |
 | POST | `/api/intake/{id}/review` | Review (approve/reject) |
 | POST | `/api/intake/{id}/clinical-review` | Run AI clinical review |
+| POST | `/api/intake/{id}/clinical-review-stream` | SSE streaming clinical review |
 | POST | `/api/intake/prescribe-assist` | AI prescribe assist |
+| POST | `/api/intake/prescribe-assist-stream` | SSE streaming prescribe assist |
 | GET | `/api/drugs/search` | Drug typeahead search |
 | GET | `/api/drugs/ndc/{ndc}` | Drug lookup by NDC |
 | GET | `/api/patients/` | Patient list |
