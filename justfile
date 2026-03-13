@@ -175,7 +175,8 @@ db-init:
 		|| psql -U $(whoami) -d postgres -c "CREATE ROLE arxi WITH LOGIN PASSWORD 'arxi';"
 	@psql -U $(whoami) -d postgres -c "SELECT 1 FROM pg_database WHERE datname='arxi'" | grep -q 1 \
 		|| psql -U $(whoami) -d postgres -c "CREATE DATABASE arxi OWNER arxi;"
-	@psql -U $(whoami) -d arxi -c "GRANT ALL ON SCHEMA public TO arxi; GRANT CREATE ON SCHEMA public TO arxi;"
+	@psql -U $(whoami) -d arxi -c "GRANT ALL ON DATABASE arxi TO arxi; GRANT ALL ON SCHEMA public TO arxi; GRANT CREATE ON SCHEMA public TO arxi; ALTER ROLE arxi CREATEDB;"
+	@psql -U $(whoami) -d arxi -c "CREATE SCHEMA IF NOT EXISTS arxi AUTHORIZATION arxi; CREATE SCHEMA IF NOT EXISTS compliance AUTHORIZATION arxi;"
 	@echo "Done — role:arxi db:arxi ready"
 
 # Run database migrations
