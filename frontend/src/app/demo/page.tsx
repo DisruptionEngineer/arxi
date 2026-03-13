@@ -1,16 +1,15 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { fetchPatients, fetchQueue } from "@/lib/api";
+import { fetchPatients, fetchQueue, searchDrugs } from "@/lib/api";
 import type {
   ClinicalReviewResult,
+  Drug,
   Patient,
   PipelineStageEvent,
   PrescribeAssistResult,
   Prescription,
 } from "@/lib/types";
-import { streamClinicalReview, streamPrescribeAssist, searchDrugs } from "@/lib/api";
-import type { Drug } from "@/lib/types";
 import { InferencePipeline } from "@/components/inference-pipeline";
 
 type DemoMode = "clinical-review" | "prescribe-assist";
@@ -31,6 +30,7 @@ export default function DemoPage() {
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [selectedDrugId, setSelectedDrugId] = useState("");
   const [drugSearch, setDrugSearch] = useState("");
+  const [prescriberNpi, setPrescriberNpi] = useState("1234567890");
   const [loaded, setLoaded] = useState(false);
 
   // Pipeline state
@@ -90,10 +90,18 @@ export default function DemoPage() {
     setPipelineKey((k) => k + 1);
   };
 
+  const handleStage = useCallback((event: PipelineStageEvent) => {
+    setRawData((prev) => ({ ...prev, stages: [...prev.stages, event] }));
+  }, []);
+
+  const handleToken = useCallback((text: string) => {
+    setRawData((prev) => ({ ...prev, tokens: prev.tokens + text }));
+  }, []);
+
   const canStart =
     mode === "clinical-review"
       ? !!selectedRxId
-      : !!selectedPatientId && !!selectedDrugId;
+      : !!selectedPatientId && !!selectedDrugId && !!prescriberNpi;
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto">
@@ -221,6 +229,18 @@ export default function DemoPage() {
                   )}
                 </div>
               </div>
+              <div className="w-40">
+                <label className="block text-xs text-gray-400 mb-1">
+                  Prescriber NPI
+                </label>
+                <input
+                  type="text"
+                  value={prescriberNpi}
+                  onChange={(e) => setPrescriberNpi(e.target.value)}
+                  placeholder="NPI..."
+                  className="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-purple-500"
+                />
+              </div>
             </>
           )}
           <button
@@ -249,8 +269,10 @@ export default function DemoPage() {
                 rxId={mode === "clinical-review" ? selectedRxId : undefined}
                 patientId={mode === "prescribe-assist" ? selectedPatientId : undefined}
                 drugId={mode === "prescribe-assist" ? selectedDrugId : undefined}
-                prescriberNpi={mode === "prescribe-assist" ? "" : undefined}
+                prescriberNpi={mode === "prescribe-assist" ? prescriberNpi : undefined}
                 compact={false}
+                onStage={handleStage}
+                onToken={handleToken}
                 onComplete={(result) => {
                   setRunning(false);
                   setRawData((prev) => ({ ...prev, result }));

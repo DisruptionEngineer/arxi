@@ -33,6 +33,10 @@ interface Props {
   prescriberNpi?: string;
   onComplete?: (result: ClinicalReviewResult | PrescribeAssistResult) => void;
   onError?: (error: string) => void;
+  /** Fired for each stage event (started/complete) — useful for demo raw data */
+  onStage?: (event: PipelineStageEvent) => void;
+  /** Fired for each streaming token — useful for demo raw data */
+  onToken?: (text: string) => void;
   compact?: boolean;
   /** Auto-start when true */
   autoStart?: boolean;
@@ -46,6 +50,8 @@ export function InferencePipeline({
   prescriberNpi,
   onComplete,
   onError,
+  onStage: onStageExternal,
+  onToken: onTokenExternal,
   compact = false,
   autoStart = true,
 }: Props) {
@@ -89,9 +95,11 @@ export function InferencePipeline({
             model: event.model,
           },
         }));
+        onStageExternal?.(event);
       },
       onToken: (text: string) => {
         setTokens((prev) => prev + text);
+        onTokenExternal?.(text);
       },
       onComplete: (result: ClinicalReviewResult | PrescribeAssistResult) => {
         setDone(true);
@@ -115,7 +123,7 @@ export function InferencePipeline({
       setError(String(err));
       setRunning(false);
     }
-  }, [mode, rxId, patientId, drugId, prescriberNpi, onComplete, onError, running]);
+  }, [mode, rxId, patientId, drugId, prescriberNpi, onComplete, onError, onStageExternal, onTokenExternal, running]);
 
   // Auto-scroll tokens
   useEffect(() => {
