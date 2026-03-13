@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Message DatatypesVersion="20170715" TransportVersion="20170715"
+         TransactionDomain="SCRIPT" TransactionVersion="20170715"
+         StructuresVersion="20170715" ECLVersion="20170715">
+  <Header>
+    <To Qualifier="P">
+      <Identification>6557744</Identification>
+    </To>
+    <From Qualifier="D">
+      <Identification>1939842031</Identification>
+    </From>
+    <MessageID>MSG001</MessageID>
+    <SentTime>2026-03-10T10:30:00</SentTime>
+  </Header>
+  <Body>
+    <NewRx>
+      <Patient>
+        <HumanPatient>
+          <Name>
+            <LastName>Johnson</LastName>
+            <FirstName>Maria</FirstName>
+          </Name>
+          <Gender>F</Gender>
+          <DateOfBirth>
+            <Date>1984-09-09</Date>
+          </DateOfBirth>
+          <Address>
+            <AddressLine1>123 Main St</AddressLine1>
+            <City>Miami</City>
+            <StateProvince>FL</StateProvince>
+            <PostalCode>33101</PostalCode>
+          </Address>
+        </HumanPatient>
+      </Patient>
+      <Pharmacy>
+        <Identification>
+          <NCPDPID>6557744</NCPDPID>
+          <NPI>1142138869</NPI>
+        </Identification>
+        <StoreName>A+ Drugs</StoreName>
+      </Pharmacy>
+      <Prescriber>
+        <NonVeterinarian>
+          <Identification>
+            <DEANumber>BB8027505</DEANumber>
+            <NPI>1939842031</NPI>
+          </Identification>
+          <Name>
+            <LastName>Bless</LastName>
+            <FirstName>Janine</FirstName>
+          </Name>
+          <Address>
+            <AddressLine1>456 Medical Dr</AddressLine1>
+            <City>Miami</City>
+            <StateProvince>FL</StateProvince>
+            <PostalCode>33102</PostalCode>
+          </Address>
+        </NonVeterinarian>
+      </Prescriber>
+      <MedicationPrescribed>
+        <DrugDescription>Amoxicillin 500 MG Oral Capsule</DrugDescription>
+        <DrugCoded>
+          <ProductCode>
+            <Code>00093310901</Code>
+            <Qualifier>ND</Qualifier>
+          </ProductCode>
+        </DrugCoded>
+        <Quantity>
+          <Value>30</Value>
+          <CodeListQualifier>38</CodeListQualifier>
+          <UnitSourceCode>EA</UnitSourceCode>
+        </Quantity>
+        <DaysSupply>10</DaysSupply>
+        <WrittenDate>
+          <Date>2026-03-10</Date>
+        </WrittenDate>
+        <NumberOfRefills>2</NumberOfRefills>
+        <Sig>
+          <SigText>Take 1 capsule by mouth 3 times daily for 10 days</SigText>
+        </Sig>
+        <Substitutions>0</Substitutions>
+      </MedicationPrescribed>
+    </NewRx>
+  </Body>
+</Message>

@@ -1,0 +1,20 @@
+agents:
+  intake-agent:
+    name: "Rx Intake Agent"
+    model: "qwen3:8b-optimized"
+    capabilities: [ocr, parsing, validation]
+    services: [intake, patient, drug]
+    human_gate: "pharmacist_review"
+    system_prompt: |
+      You are a pharmacy intake agent. You receive parsed prescription data
+      and validate it for completeness and accuracy.
+
+      Check for:
+      1. All required fields present (patient name, DOB, prescriber, drug, quantity, sig)
+      2. NDC code format validity (11 digits)
+      3. Sig text is comprehensible
+      4. Quantity and days supply are reasonable for the medication
+      5. Refill count is within normal range (0-11)
+
+      Return a JSON object with:
+      {"valid": true/false, "issues": ["list of issues"], "confidence": 0.0-1.0}

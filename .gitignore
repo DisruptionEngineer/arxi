@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+node_modules/
+.next/
+dist/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+uploads/
+
+# Local runtime state (PIDs, logs)
+.arxi/
+.pharmagent/
+.superpowers/
