@@ -5,11 +5,13 @@ import type {
   ClinicalCategoryResult,
   ClinicalReviewResult,
   FollowupAction,
+  PrescribeAssistResult,
   Prescription,
   RejectionReason,
 } from "@/lib/types";
 import { approveRx, rejectRx, runClinicalReview } from "@/lib/api";
 import { useAuth } from "@/context/auth-context";
+import { InferencePipeline } from "@/components/inference-pipeline";
 
 const DAW_LABELS: Record<number, string> = {
   0: "Substitution Permitted",
@@ -211,7 +213,7 @@ function ClinicalDecisionSupport({
   rx: Prescription;
   onFindingsUpdate: (findings: ClinicalReviewResult) => void;
 }) {
-  const [loading, setLoading] = useState(false);
+  const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showReasoning, setShowReasoning] = useState(false);
   const [showThinking, setShowThinking] = useState(false);
@@ -219,44 +221,31 @@ function ClinicalDecisionSupport({
   const findings = rx.clinical_findings;
   const hasFindings = findings && !findings._error;
 
-  const handleRunReview = async () => {
-    setLoading(true);
+  const handleRunReview = () => {
+    setStreaming(true);
     setError(null);
-    try {
-      const result = await runClinicalReview(rx.id);
-      onFindingsUpdate(result);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Clinical review failed");
-    } finally {
-      setLoading(false);
-    }
   };
 
-  // Loading state
-  if (loading) {
+  // Streaming pipeline state
+  if (streaming) {
     return (
       <section className="bg-gray-900/70 border border-purple-900/40 rounded-lg p-4">
-        <div className="flex items-center gap-3">
-          <div className="animate-pulse flex items-center gap-2">
-            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" />
-            <div
-              className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
-              style={{ animationDelay: "0.15s" }}
-            />
-            <div
-              className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
-              style={{ animationDelay: "0.3s" }}
-            />
-          </div>
-          <span className="text-sm text-purple-300">
-            Analyzing prescription with AI clinical review...
-          </span>
-        </div>
-        <p className="text-xs text-gray-500 mt-2">
-          Running DUR, drug interactions, allergy screening, dose range, patient
-          profile, and prescriber credential checks. This typically takes 15-60
-          seconds.
-        </p>
+        <h3 className="text-xs font-medium text-purple-400 uppercase tracking-wider mb-3">
+          Clinical Decision Support — Live Pipeline
+        </h3>
+        <InferencePipeline
+          mode="clinical-review"
+          rxId={rx.id}
+          compact
+          onComplete={(result) => {
+            onFindingsUpdate(result as ClinicalReviewResult);
+            setStreaming(false);
+          }}
+          onError={(msg) => {
+            setError(msg);
+            setStreaming(false);
+          }}
+        />
       </section>
     );
   }

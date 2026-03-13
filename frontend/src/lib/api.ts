@@ -5,6 +5,7 @@ import type {
   FollowupAction,
   Patient,
   PatientListResponse,
+  PipelineCallbacks,
   PrescribeAssistResult,
   Prescription,
   QueueResponse,
@@ -263,6 +264,94 @@ export async function fetchDrugByNdc(ndc: string): Promise<import("./types").Dru
     throw new Error(err.detail || "Drug not found");
   }
   return res.json();
+}
+
+// --- SSE Streaming ---
+
+async function parseSSEStream(response: Response, callbacks: PipelineCallbacks): Promise<void> {
+  const reader = response.body?.getReader();
+  if (!reader) {
+    callbacks.onError("No response body");
+    return;
+  }
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    let eventType = "";
+    let dataBuffer = "";
+
+    for (const line of lines) {
+      if (line.startsWith("event: ")) {
+        eventType = line.slice(7).trim();
+      } else if (line.startsWith("data: ")) {
+        dataBuffer += line.slice(6);
+      } else if (line === "" && eventType && dataBuffer) {
+        try {
+          const data = JSON.parse(dataBuffer);
+          switch (eventType) {
+            case "stage":
+              callbacks.onStage(data);
+              break;
+            case "token":
+              callbacks.onToken(data.text);
+              break;
+            case "complete":
+              callbacks.onComplete(data);
+              break;
+            case "error":
+              callbacks.onError(data.message || "Unknown error");
+              break;
+          }
+        } catch {
+          // skip malformed events
+        }
+        eventType = "";
+        dataBuffer = "";
+      }
+    }
+  }
+}
+
+export async function streamClinicalReview(rxId: string, callbacks: PipelineCallbacks): Promise<void> {
+  const res = await apiFetch(`/api/intake/${rxId}/clinical-review-stream`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Stream failed" }));
+    callbacks.onError(err.detail || "Stream failed");
+    return;
+  }
+  await parseSSEStream(res, callbacks);
+}
+
+export async function streamPrescribeAssist(
+  patientId: string,
+  drugId: string,
+  prescriberNpi: string,
+  callbacks: PipelineCallbacks,
+): Promise<void> {
+  const res = await apiFetch("/api/intake/prescribe-assist-stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      patient_id: patientId,
+      drug_id: drugId,
+      prescriber_npi: prescriberNpi,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Stream failed" }));
+    callbacks.onError(err.detail || "Stream failed");
+    return;
+  }
+  await parseSSEStream(res, callbacks);
 }
 
 // --- Audit ---

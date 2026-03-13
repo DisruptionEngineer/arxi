@@ -268,3 +268,24 @@ export interface PharmaEvent {
   actor_id: string;
   timestamp: string;
 }
+
+// --- AI Pipeline Streaming ---
+
+export type PipelineStage = "data_gathering" | "prompt_construction" | "llm_inference" | "response_parsing";
+
+export interface PipelineStageEvent {
+  stage: PipelineStage;
+  status: "started" | "complete";
+  timing_ms?: number;
+  context?: Record<string, unknown>;
+  prompt_preview?: string;
+  prompt_length?: number;
+  model?: string;
+}
+
+export interface PipelineCallbacks {
+  onStage: (event: PipelineStageEvent) => void;
+  onToken: (text: string) => void;
+  onComplete: (result: ClinicalReviewResult | PrescribeAssistResult) => void;
+  onError: (error: string) => void;
+}

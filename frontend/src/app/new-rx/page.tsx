@@ -9,6 +9,7 @@ import {
   prescribeAssist,
 } from "@/lib/api";
 import type {
+  ClinicalReviewResult,
   Drug,
   ManualRxInput,
   Patient,
@@ -17,6 +18,7 @@ import type {
   RxContextResponse,
 } from "@/lib/types";
 import { DrugSearch } from "@/components/drug-search";
+import { InferencePipeline } from "@/components/inference-pipeline";
 import { PatientPicker } from "@/components/patient-picker";
 import { PrescriberPicker } from "@/components/prescriber-picker";
 
@@ -82,28 +84,16 @@ export default function NewRxPage() {
 
   const [showThinking, setShowThinking] = useState(false);
 
-  // Trigger AI when drug is selected
-  const handleDrugSelect = async (drug: Drug) => {
+  // Trigger AI when drug is selected — now uses streaming pipeline
+  const handleDrugSelect = (drug: Drug) => {
     setSelectedDrug(drug);
     setDrugSearch(drug.drug_name);
     setAiResult(null);
     setEditing(false);
+    setAiError(null);
 
     if (patient) {
       setAiLoading(true);
-      setAiError(null);
-      try {
-        const result = await prescribeAssist(
-          patient.id,
-          drug.id,
-          prescriberNpi || "",
-        );
-        setAiResult(result);
-      } catch (e: unknown) {
-        setAiError(e instanceof Error ? e.message : "AI prescribing failed");
-      } finally {
-        setAiLoading(false);
-      }
     }
   };
 
@@ -141,18 +131,6 @@ export default function NewRxPage() {
         setAiLoading(true);
         setAiError(null);
         setAiResult(null);
-        try {
-          const result = await prescribeAssist(
-            p.id,
-            selectedDrug.id,
-            prescriberNpi || "",
-          );
-          setAiResult(result);
-        } catch (e: unknown) {
-          setAiError(e instanceof Error ? e.message : "AI prescribing failed");
-        } finally {
-          setAiLoading(false);
-        }
       }
     }
   };
@@ -342,29 +320,27 @@ export default function NewRxPage() {
         {/* Step 3: AI Recommendation */}
         {patient && selectedDrug && (
           <section>
-            {/* Loading */}
+            {/* Streaming Pipeline */}
             {aiLoading && (
-              <div className="bg-purple-900/20 border border-purple-800/40 rounded-lg p-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="animate-pulse flex items-center gap-1.5">
-                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" />
-                    <div
-                      className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "0.15s" }}
-                    />
-                    <div
-                      className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "0.3s" }}
-                    />
-                  </div>
-                  <span className="text-sm text-purple-300 font-medium">
-                    Generating prescribing details...
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500">
-                  Analyzing patient profile, drug characteristics, and active
-                  medications to determine appropriate prescribing parameters.
-                </p>
+              <div className="bg-purple-900/20 border border-purple-800/40 rounded-lg p-4">
+                <h3 className="text-xs font-medium text-purple-400 uppercase tracking-wider mb-3">
+                  Prescribe Assist — Live Pipeline
+                </h3>
+                <InferencePipeline
+                  mode="prescribe-assist"
+                  patientId={patient?.id}
+                  drugId={selectedDrug?.id}
+                  prescriberNpi={prescriberNpi || ""}
+                  compact
+                  onComplete={(result) => {
+                    setAiResult(result as PrescribeAssistResult);
+                    setAiLoading(false);
+                  }}
+                  onError={(msg) => {
+                    setAiError(msg);
+                    setAiLoading(false);
+                  }}
+                />
               </div>
             )}
 

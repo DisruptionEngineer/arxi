@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from arxi.auth.middleware import get_current_user, require_role
@@ -93,6 +94,54 @@ async def run_clinical_review(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     return findings
+
+
+@router.post("/{rx_id}/clinical-review-stream")
+async def run_clinical_review_stream(
+    rx_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role(Role.PHARMACIST)),
+):
+    """Stream AI clinical review as Server-Sent Events."""
+    svc = ClinicalReviewService(db)
+    return StreamingResponse(
+        svc.run_review_stream(
+            rx_id,
+            actor_id=str(user.id),
+            actor_role=user.role.value,
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.post("/prescribe-assist-stream")
+async def prescribe_assist_stream(
+    req: PrescribeAssistRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role(Role.PHARMACIST)),
+):
+    """Stream AI prescribe-assist as Server-Sent Events."""
+    svc = ClinicalReviewService(db)
+    return StreamingResponse(
+        svc.prescribe_assist_stream(
+            patient_id=req.patient_id,
+            drug_id=req.drug_id,
+            prescriber_npi=req.prescriber_npi,
+            actor_id=str(user.id),
+            actor_role=user.role.value,
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.post("/prescribe-assist")

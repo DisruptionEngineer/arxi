@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: "/new-rx", label: "New Rx" },
   { href: "/ingest", label: "E-Prescribe" },
   { href: "/patients", label: "Patients" },
+  { href: "/demo", label: "AI Demo" },
 ];
 
 const ADMIN_NAV_ITEMS = [
