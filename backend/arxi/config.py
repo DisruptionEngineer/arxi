@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    database_url: str = "postgresql+asyncpg://pharmagent:pharmagent@localhost:5432/pharmagent"
+    database_url: str = "postgresql+asyncpg://arxi:arxi@localhost:5432/arxi"
     redis_url: str = "redis://localhost:6379/0"
     ollama_url: str = "http://localhost:11434"
     ollama_model: str = "qwen3:8b-optimized"

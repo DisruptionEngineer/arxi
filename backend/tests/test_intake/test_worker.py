@@ -67,8 +67,8 @@ async def test_worker_publishes_status_changed_event(db):
     rx = await svc.ingest_newrx(_MINIMAL_XML, source="e-prescribe", actor_id="test-agent")
 
     with (
-        patch("pharmagent.worker.event_bus") as mock_bus,
-        patch("pharmagent.modules.patient.matcher.event_bus", new=AsyncMock()),
+        patch("arxi.worker.event_bus") as mock_bus,
+        patch("arxi.modules.patient.matcher.event_bus", new=AsyncMock()),
     ):
         mock_bus.publish = AsyncMock()
         await process_pending(db)
@@ -87,7 +87,7 @@ async def test_worker_matches_patient_during_processing(db):
     rx = await svc.ingest_newrx(_MINIMAL_XML, source="e-prescribe", actor_id="test-agent")
     assert rx.patient_id is None
 
-    with patch("pharmagent.modules.patient.matcher.event_bus", new=AsyncMock()):
+    with patch("arxi.modules.patient.matcher.event_bus", new=AsyncMock()):
         await process_pending(db)
 
     updated = await svc._get(rx.id)
@@ -104,7 +104,7 @@ async def test_worker_continues_on_matching_failure(db):
     svc = IntakeService(db)
     rx = await svc.ingest_newrx(_MINIMAL_XML, source="e-prescribe", actor_id="test-agent")
 
-    with patch("pharmagent.worker.PatientMatcher") as MockMatcher:
+    with patch("arxi.worker.PatientMatcher") as MockMatcher:
         mock_instance = AsyncMock()
         mock_instance.match_and_link = AsyncMock(side_effect=Exception("matcher boom"))
         MockMatcher.return_value = mock_instance
@@ -120,7 +120,7 @@ async def test_worker_audit_logs_patient_match(db):
     svc = IntakeService(db)
     rx = await svc.ingest_newrx(_MINIMAL_XML, source="e-prescribe", actor_id="test-agent")
 
-    with patch("pharmagent.modules.patient.matcher.event_bus", new=AsyncMock()):
+    with patch("arxi.modules.patient.matcher.event_bus", new=AsyncMock()):
         await process_pending(db)
 
     audit_svc = AuditService(db)

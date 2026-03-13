@@ -40,7 +40,7 @@ async def _make_patient(db, first="John", last="Doe", dob="1990-01-15") -> Patie
 async def test_tier1_exact_match_links_patient(db):
     patient = await _make_patient(db)
     rx = await _make_rx(db)
-    with patch("pharmagent.modules.patient.matcher.event_bus") as mock_bus:
+    with patch("arxi.modules.patient.matcher.event_bus") as mock_bus:
         mock_bus.publish = AsyncMock()
         matcher = PatientMatcher(db)
         result = await matcher.match_and_link(rx)
@@ -54,7 +54,7 @@ async def test_tier1_exact_match_links_patient(db):
 async def test_tier1_nickname_match(db):
     patient = await _make_patient(db, first="Robert")
     rx = await _make_rx(db, first="Bob")
-    with patch("pharmagent.modules.patient.matcher.event_bus") as mock_bus:
+    with patch("arxi.modules.patient.matcher.event_bus") as mock_bus:
         mock_bus.publish = AsyncMock()
         matcher = PatientMatcher(db)
         result = await matcher.match_and_link(rx)
@@ -66,7 +66,7 @@ async def test_tier1_nickname_match(db):
 async def test_tier1_suffix_ignored(db):
     patient = await _make_patient(db, last="Smith")
     rx = await _make_rx(db, last="Smith Jr")
-    with patch("pharmagent.modules.patient.matcher.event_bus") as mock_bus:
+    with patch("arxi.modules.patient.matcher.event_bus") as mock_bus:
         mock_bus.publish = AsyncMock()
         matcher = PatientMatcher(db)
         result = await matcher.match_and_link(rx)
@@ -86,9 +86,9 @@ async def test_tier1_multiple_matches_falls_to_tier2(db):
     mock_response.status_code = 200
     mock_response.json.return_value = {"response": '{"match": null, "reason": "ambiguous"}'}
 
-    with patch("pharmagent.modules.patient.matcher.event_bus") as mock_bus:
+    with patch("arxi.modules.patient.matcher.event_bus") as mock_bus:
         mock_bus.publish = AsyncMock()
-        with patch("pharmagent.modules.patient.matcher.httpx.AsyncClient") as MockClient:
+        with patch("arxi.modules.patient.matcher.httpx.AsyncClient") as MockClient:
             mock_client = AsyncMock()
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -114,9 +114,9 @@ async def test_tier2_llm_returns_match(db):
         "response": json.dumps({"match": p1.id, "confidence": "high", "reason": "same address"})
     }
 
-    with patch("pharmagent.modules.patient.matcher.event_bus") as mock_bus:
+    with patch("arxi.modules.patient.matcher.event_bus") as mock_bus:
         mock_bus.publish = AsyncMock()
-        with patch("pharmagent.modules.patient.matcher.httpx.AsyncClient") as MockClient:
+        with patch("arxi.modules.patient.matcher.httpx.AsyncClient") as MockClient:
             mock_client = AsyncMock()
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -141,9 +141,9 @@ async def test_tier2_llm_returns_null(db):
         "response": json.dumps({"match": None, "reason": "no confident match"})
     }
 
-    with patch("pharmagent.modules.patient.matcher.event_bus") as mock_bus:
+    with patch("arxi.modules.patient.matcher.event_bus") as mock_bus:
         mock_bus.publish = AsyncMock()
-        with patch("pharmagent.modules.patient.matcher.httpx.AsyncClient") as MockClient:
+        with patch("arxi.modules.patient.matcher.httpx.AsyncClient") as MockClient:
             mock_client = AsyncMock()
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -163,9 +163,9 @@ async def test_tier2_llm_timeout_falls_to_tier3(db):
 
     import httpx as real_httpx
 
-    with patch("pharmagent.modules.patient.matcher.event_bus") as mock_bus:
+    with patch("arxi.modules.patient.matcher.event_bus") as mock_bus:
         mock_bus.publish = AsyncMock()
-        with patch("pharmagent.modules.patient.matcher.httpx.AsyncClient") as MockClient:
+        with patch("arxi.modules.patient.matcher.httpx.AsyncClient") as MockClient:
             mock_client = AsyncMock()
             mock_client.post = AsyncMock(side_effect=real_httpx.TimeoutException("timeout"))
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -182,7 +182,7 @@ async def test_tier2_llm_timeout_falls_to_tier3(db):
 
 async def test_tier3_no_candidates_creates_patient(db):
     rx = await _make_rx(db, first="Brand", last="New", dob="2000-01-01")
-    with patch("pharmagent.modules.patient.matcher.event_bus") as mock_bus:
+    with patch("arxi.modules.patient.matcher.event_bus") as mock_bus:
         mock_bus.publish = AsyncMock()
         matcher = PatientMatcher(db)
         result = await matcher.match_and_link(rx)
@@ -203,7 +203,7 @@ async def test_tier3_no_candidates_creates_patient(db):
 async def test_tier1_publishes_patient_linked_event(db):
     patient = await _make_patient(db)
     rx = await _make_rx(db)
-    with patch("pharmagent.modules.patient.matcher.event_bus") as mock_bus:
+    with patch("arxi.modules.patient.matcher.event_bus") as mock_bus:
         mock_bus.publish = AsyncMock()
         matcher = PatientMatcher(db)
         await matcher.match_and_link(rx)
@@ -217,7 +217,7 @@ async def test_tier1_publishes_patient_linked_event(db):
 
 async def test_tier3_publishes_patient_created_event(db):
     rx = await _make_rx(db, first="NewPerson", last="Test", dob="1999-01-01")
-    with patch("pharmagent.modules.patient.matcher.event_bus") as mock_bus:
+    with patch("arxi.modules.patient.matcher.event_bus") as mock_bus:
         mock_bus.publish = AsyncMock()
         matcher = PatientMatcher(db)
         await matcher.match_and_link(rx)

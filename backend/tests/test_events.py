@@ -46,7 +46,7 @@ async def test_publish_calls_redis_publish():
     await bus.publish(evt)
     bus._redis.publish.assert_called_once()
     channel, payload = bus._redis.publish.call_args[0]
-    assert channel == "pharmagent:events"
+    assert channel == "arxi:events"
     parsed = json.loads(payload)
     assert parsed["type"] == "prescription.status_changed"
 

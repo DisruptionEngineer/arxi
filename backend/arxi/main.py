@@ -42,4 +42,4 @@ app.websocket("/ws/events")(ws_events)
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "pharmagent"}
+    return {"status": "ok", "service": "arxi"}

@@ -42,7 +42,7 @@ async def test_approve_publishes_event(db):
     await svc.validate(rx.id, actor_id="agent")
     await svc.submit_for_review(rx.id, actor_id="agent")
 
-    with patch("pharmagent.modules.intake.service.event_bus") as mock_bus:
+    with patch("arxi.modules.intake.service.event_bus") as mock_bus:
         mock_bus.publish = AsyncMock()
         await svc.approve(rx.id, pharmacist_id="rph-001", notes="ok")
 
@@ -61,7 +61,7 @@ async def test_reject_publishes_event(db):
     await svc.validate(rx.id, actor_id="agent")
     await svc.submit_for_review(rx.id, actor_id="agent")
 
-    with patch("pharmagent.modules.intake.service.event_bus") as mock_bus:
+    with patch("arxi.modules.intake.service.event_bus") as mock_bus:
         mock_bus.publish = AsyncMock()
         await svc.reject(rx.id, pharmacist_id="rph-001", notes="issue")
 
