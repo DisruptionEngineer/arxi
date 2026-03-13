@@ -47,7 +47,7 @@ class ClinicalCheck(str, enum.Enum):
 
 class Prescription(Base):
     __tablename__ = "prescriptions"
-    __table_args__ = {"schema": "pharma"}
+    __table_args__ = {"schema": "arxi"}
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())

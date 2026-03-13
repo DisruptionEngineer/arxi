@@ -14,6 +14,7 @@ class Role(str, enum.Enum):
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = {"schema": "public"}
     # Intentionally in public schema — users span all domain schemas
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))

@@ -36,6 +36,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
+        schema="public",
     )
 
     # --- compliance.audit_log ---
@@ -57,6 +58,22 @@ def upgrade() -> None:
         sa.Column("before_state", sa.JSON(), nullable=True),
         sa.Column("after_state", sa.JSON(), nullable=True),
         schema="compliance",
+    )
+
+    # --- arxi.drugs ---
+    op.create_table(
+        "drugs",
+        sa.Column("id", sa.String(36), primary_key=True),
+        sa.Column("ndc", sa.String(20), nullable=False, unique=True, index=True),
+        sa.Column("drug_name", sa.String(300), nullable=False, index=True),
+        sa.Column("generic_name", sa.String(300), nullable=False, server_default=""),
+        sa.Column("dosage_form", sa.String(100), nullable=False, server_default=""),
+        sa.Column("strength", sa.String(100), nullable=False, server_default=""),
+        sa.Column("route", sa.String(100), nullable=False, server_default=""),
+        sa.Column("manufacturer", sa.String(200), nullable=False, server_default=""),
+        sa.Column("dea_schedule", sa.String(10), nullable=False, server_default=""),
+        sa.Column("package_description", sa.Text(), nullable=False, server_default=""),
+        schema="arxi",
     )
 
     # --- arxi.patients ---
@@ -139,8 +156,9 @@ def downgrade() -> None:
     """Drop all tables and schemas."""
     op.drop_table("prescriptions", schema="arxi")
     op.drop_table("patients", schema="arxi")
+    op.drop_table("drugs", schema="arxi")
     op.drop_table("audit_log", schema="compliance")
-    op.drop_table("users")
+    op.drop_table("users", schema="public")
 
     # Clean up enum types
     op.execute("DROP TYPE IF EXISTS rxstatus")

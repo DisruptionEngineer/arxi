@@ -10,7 +10,7 @@ class Drug(Base):
     """Drug product — sourced from FDA NDC Directory."""
 
     __tablename__ = "drugs"
-    __table_args__ = {"schema": "pharma"}
+    __table_args__ = {"schema": "arxi"}
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
